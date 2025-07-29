@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: MelongApp
+    volumes:
+      - .:/var/www
+    ports:
+      - "9000:9000"
+    networks:
+      - MelongNet
+
+  nginx:
+    image: nginx:alpine
+    container_name: MelongNginx
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - MelongNet
+
+networks:
+  MelongNet:
+    driver: bridge

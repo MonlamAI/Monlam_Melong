@@ -1,0 +1,17 @@
+
+
+
+
+@import "./tibetan-fonts.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+select#category {
+    font-size: 14px;
+}
+
+.grid.grid-cols-1.md\:grid-cols-2.gap-2 {
+    padding: 6px;
+}
