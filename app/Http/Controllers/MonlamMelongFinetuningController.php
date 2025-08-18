@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MonlamMelongFinetuning;
 use App\Models\Category;
 use App\Models\Tag;
+use App\Models\EntryActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -163,11 +164,23 @@ class MonlamMelongFinetuningController extends Controller
         $entry->user_id = Auth::id();
         $entry->status = 'draft';
         $entry->save();
-        
+
         // Process tags and associate them with the entry
         if (!empty($tagsInput)) {
             $this->syncTagsWithEntry($entry, $tagsInput);
         }
+
+        // Log activity: creation words
+        $words = $this->countWords(($validated['question'] ?? '') . ' ' . ($validated['answer'] ?? ''));
+        EntryActivityLog::create([
+            'user_id' => $user->id,
+            'entry_id' => $entry->id,
+            'action' => 'created',
+            'words_created' => $words,
+            'words_edited' => 0,
+            'category' => $entry->category,
+            'occurred_at' => now(),
+        ]);
 
         return redirect()->route('entries.show', $entry)
             ->with('success', 'Entry created successfully');
@@ -245,7 +258,24 @@ class MonlamMelongFinetuningController extends Controller
             unset($validated['status']);
         }
 
+        // Calculate word edit delta before update
+        $oldWords = $this->countWords(($entry->question ?? '') . ' ' . ($entry->answer ?? ''));
+
         $entry->update($validated);
+        $newWords = $this->countWords(($entry->question ?? '') . ' ' . ($entry->answer ?? ''));
+        $edited = abs($newWords - $oldWords);
+
+        if ($edited > 0) {
+            EntryActivityLog::create([
+                'user_id' => Auth::id(),
+                'entry_id' => $entry->id,
+                'action' => 'edited',
+                'words_created' => 0,
+                'words_edited' => $edited,
+                'category' => $entry->category,
+                'occurred_at' => now(),
+            ]);
+        }
         
         // Sync tags with entry in the tags table and pivot table
         if (isset($allTagsInput)) {
@@ -782,5 +812,17 @@ public function tagIndex()
         // Also store tag names as comma-separated string in tags column for backwards compatibility
         $entry->tags = implode(',', $tagNames);
         $entry->save();
+    }
+
+    /**
+     * Count words from a given string by tokenizing on whitespace and punctuation.
+     */
+    private function countWords(string $text): int
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+        if ($text === '') return 0;
+        // Split on whitespace; works for Tibetan/Latin sequences as tokens
+        $tokens = preg_split('/\s+/u', $text);
+        return is_array($tokens) ? count($tokens) : 0;
     }
 }

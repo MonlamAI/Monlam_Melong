@@ -72,7 +72,22 @@
                             {{ __('རང་ཉིད་ཀྱི་ཐོ་ཡིག') }}
                         </x-dropdown-link>
 
+                        <!-- Reports -->
+                        <div class="border-t border-gray-200"></div>
+                        <!-- <div class="block px-4 py-2 text-xs text-gray-400">
+                            {{ __('Reports') }}
+                        </div> -->
+                        <x-dropdown-link :href="route('reports.user')" :active="request()->routeIs('reports.user')">
+                            {{ __('ངའི་བྱེད་སྒོའི་སྙོམས་འགྲུབ།') }}
+                        </x-dropdown-link>
+                        @if (Auth::user()->isAdmin())
+                        <x-dropdown-link :href="route('reports.admin')" :active="request()->routeIs('reports.admin')">
+                            {{ __('དོ་དམ་པའི་སྙོམས་འགྲུབ།') }}
+                        </x-dropdown-link>
+                        @endif
+
                         <!-- Authentication -->
+                        <div class="border-t border-gray-200 mt-1"></div>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
 

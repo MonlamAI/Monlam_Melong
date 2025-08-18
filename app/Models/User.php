@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Department;
+use App\Models\UserHeartbeat;
+use App\Models\EntryActivityLog;
 
 class User extends Authenticatable
 {
@@ -21,6 +24,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'department_id',
         'password',
         'role',
         'allowed_categories',
@@ -97,6 +101,30 @@ class User extends Authenticatable
     public function entries()
     {
         return $this->hasMany(MonlamMelongFinetuning::class);
+    }
+
+    /**
+     * Department relationship.
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Heartbeats relationship.
+     */
+    public function heartbeats()
+    {
+        return $this->hasMany(UserHeartbeat::class);
+    }
+
+    /**
+     * Entry activity logs relationship.
+     */
+    public function entryActivityLogs()
+    {
+        return $this->hasMany(EntryActivityLog::class);
     }
 
     /**

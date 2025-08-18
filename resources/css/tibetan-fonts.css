@@ -2,12 +2,12 @@
 
 @font-face {
     font-family: 'MonlamTBslim';
-    src: url('./fonts/MonlamTBslim.eot'); /* IE9 Compat Modes */
-    src: url('./fonts/MonlamTBslim.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-         url('./fonts/MonlamTBslim.woff2') format('woff2'), /* Super Modern Browsers */
-         url('./fonts/MonlamTBslim.woff') format('woff'), /* Modern Browsers */
-         url('./fonts/MonlamTBslim.ttf') format('truetype'), /* Safari, Android, iOS */
-         url('./fonts/MonlamTBslim.svg#MonlamTBslim') format('svg'); /* Legacy iOS */
+    src: url('../fonts/MonlamTBslim.eot'); /* IE9 Compat Modes */
+    src: url('../fonts/MonlamTBslim.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+         url('../fonts/MonlamTBslim.woff2') format('woff2'), /* Super Modern Browsers */
+         url('../fonts/MonlamTBslim.woff') format('woff'), /* Modern Browsers */
+         url('../fonts/MonlamTBslim.ttf') format('truetype'), /* Safari, Android, iOS */
+         url('../fonts/MonlamTBslim.svg#MonlamTBslim') format('svg'); /* Legacy iOS */
     font-weight: normal;
     font-style: normal;
     font-display: swap;

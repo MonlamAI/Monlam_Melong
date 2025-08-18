@@ -23,17 +23,22 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <x-input-label for="category" :value="__('སྡེ་ཚན། (Category)')" />
+                                @php
+                                    // Prepare helpers for category selection logic
+                                    $categoryNames = $categories->pluck('name')->toArray();
+                                    $currentCategory = old('category', $entry->category);
+                                    $isExistingCategory = in_array($currentCategory, $categoryNames, true);
+                                @endphp
                                 <select id="category" name="category" class="block mt-1 w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
                                     <option value="">{{ __('སྡེ་ཚན་གདམ་ཀ') }} (Select Category)</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->name }}" {{ old('category', $entry->category) == $category->name ? 'selected' : '' }}>{{ $category->tibetan_name ?: $category->name }}</option>
+                                        <option value="{{ $category->name }}" {{ $currentCategory == $category->name ? 'selected' : '' }}>{{ $category->tibetan_name ?: $category->name }}</option>
                                     @endforeach
-                                    <option value="new_category" {{ !in_array(old('category', $entry->category), $categories->toArray()) && old('category', $entry->category) ? 'selected' : '' }}>{{ __('གསར་པ་སྣོན།') }} (Add New)</option>
+                                    <option value="new_category" {{ !$isExistingCategory && $currentCategory ? 'selected' : '' }}>{{ __('གསར་པ་སྣོན།') }} (Add New)</option>
                                 </select>
 
-                                <div id="new_category_input" class="mt-2 {{ !in_array(old('category', $entry->category), $categories->toArray()) && old('category', $entry->category) ? '' : 'hidden' }}">
-                                    <x-text-input id="new_category" class="block w-full" type="text" value="{{ !in_array(old('category', $entry->category), $categories->toArray()) ? old('category', $entry->category) : '' }}" placeholder="{{ __('སྡེ་ཚན་གསར་པ། (New Category)') }}" />
-                                    <p class="text-sm text-gray-500 mt-1">{{ __('སྡེ་ཚན་གསར་པ་བྲིས་ནས་ཟིན་བྲིས་ཉར་ཚགས་བྱེད་དུས་རང་འགུལ་གྱིས་སྣོན་ངེས།') }}</p>
+                                <div id="new_category_input" class="mt-2 {{ !$isExistingCategory && $currentCategory ? '' : 'hidden' }}">
+                                    <x-text-input id="new_category" class="block w-full" type="text" value="{{ !$isExistingCategory ? $currentCategory : '' }}" placeholder="{{ __('སྡེ་ཚན་གསར་པ། (New Category)') }}" />
                                 </div>
                                 <x-input-error :messages="$errors->get('category')" class="mt-2" />
                             </div>
@@ -54,20 +59,58 @@
                         <div class="mb-6">
                             <x-input-label for="tags" :value="__('རྒྱབ་མཐའ། (Tags - select or add new)')" />
                             <div class="mt-1 relative">
-                                <div class="flex flex-wrap gap-2 mb-2">
+                                <!-- Search Bar -->
+                                <div class="mb-2">
+                                    <input type="text" id="tagSearch" class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" 
+                                           placeholder="{{ __('དོན་ཚན་བཙལ་བ། (Search tags)...') }}">
+                                </div>
+                                
+                                <!-- Tags Container -->
+                                <div id="tagsContainer" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
                                     @php $entryTagsArray = $entry->tags ? explode(',', $entry->tags) : []; @endphp
-                                    @foreach($tags as $tag)
-                                        <label class="inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm">
-                                            <input type="checkbox" name="selected_tags[]" value="{{ $tag->name }}" class="mr-1" {{ in_array($tag->name, $entryTagsArray) ? 'checked' : '' }}>
+                                    @foreach($tags as $index => $tag)
+                                        <label class="tag-item inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm {{ $index >= 6 ? 'hidden more-tag' : '' }}" 
+                                               data-tag-name="{{ strtolower($tag->tibetan_name ?: $tag->name) }}">
+                                            <input type="checkbox" name="selected_tags[]" value="{{ $tag->name }}" 
+                                                   class="mr-1" {{ in_array($tag->name, $entryTagsArray) ? 'checked' : '' }}>
                                             {{ $tag->tibetan_name ?: $tag->name }}
                                         </label>
                                     @endforeach
                                 </div>
-                                <x-text-input id="tags" class="block w-full" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
+                                
+                                <!-- See More/Less Button -->
+                                @if(count($tags) > 6)
+                                    <button type="button" id="toggleTags" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none">
+                                        མུ་མཐུད་གཟིགས། ({{ count($tags) - 6 }} More)
+                                    </button>
+                                @endif
+                                
+                                <!-- New Tags Input -->
+                                <x-text-input id="tags" class="block w-full mt-2" style="color: black;" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
                                 <p class="text-sm text-gray-500 mt-1">{{ __('དོན་ཚན་གསར་པ་ཁ་སྣོན་བྱེད་ན་དོན་ཚན་གཉིས་ཀྱི་པར་ལ་དབྱིན་ཇིའི་ཁོ་མ་ངེས་པར་དུ་འབྲི་དགོས།') }} (Separate new tags with commas)</p>
                             </div>
                             <x-input-error :messages="$errors->get('tags')" class="mt-2" />
-                        </div>
+                            
+                            <style>
+                                .tag-item {
+                                    transition: all 0.3s ease;
+                                }
+                                #tagsContainer {
+                                    scrollbar-width: thin;
+                                    scrollbar-color: #c7d2fe #e0e7ff;
+                                }
+                                #tagsContainer::-webkit-scrollbar {
+                                    width: 6px;
+                                }
+                                #tagsContainer::-webkit-scrollbar-track {
+                                    background: #e0e7ff;
+                                    border-radius: 3px;
+                                }
+                                #tagsContainer::-webkit-scrollbar-thumb {
+                                    background-color: #c7d2fe;
+                                    border-radius: 3px;
+                                }
+                            </style>
 
                         <div class="mb-6">
                             <x-input-label for="context" :value="__('རྒྱབ་ལྗོངས། (Context)')" />
@@ -189,4 +232,42 @@
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggleTags');
+            const tagSearch = document.getElementById('tagSearch');
+            const tagItems = document.querySelectorAll('.tag-item');
+            let showAll = false;
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showAll = !showAll;
+                    const moreTags = document.querySelectorAll('.more-tag');
+                    
+                    moreTags.forEach(tag => {
+                        tag.classList.toggle('hidden', !showAll);
+                    });
+                    
+                    toggleBtn.textContent = showAll 
+                        ? 'ཡོངས་བསྡུས། (Show Less)' 
+                        : `མུ་མཐུད་གཟིགས། (${tagItems.length - 6} More)`;
+                });
+            }
+            
+            if (tagSearch) {
+                tagSearch.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    tagItems.forEach(tag => {
+                        const tagName = tag.getAttribute('data-tag-name');
+                        if (tagName && tagName.includes(searchTerm)) {
+                            tag.classList.remove('hidden');
+                        } else {
+                            tag.classList.add('hidden');
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </x-app-layout>
