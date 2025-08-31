@@ -100,7 +100,7 @@
                         <!-- Tags -->
                         <div class="mb-4">
                             <x-input-label for="tags" :value="__('ངོ་རྟགས།')" />
-                            <x-text-input id="tags" class="block mt-1 w-full" type="text" name="tags" :value="old('tags', $benchmark->tags)" />
+                            <x-text-input id="tags" class="block mt-1 w-full" style="color: black;" type="text" name="tags" :value="old('tags', $benchmark->tags)" />
                             <x-input-error :messages="$errors->get('tags')" class="mt-2" />
                             <p class="text-sm text-gray-600 mt-1">{{ __('ཚིག་གྲུབ་མང་པོ་ཡོད་ན་ཚེག་ཁྱིམ་ , བཞག་སྟེ་བྲིས།') }}</p>
                         </div>

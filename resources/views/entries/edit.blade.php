@@ -23,17 +23,22 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
                                 <x-input-label for="category" :value="__('སྡེ་ཚན། (Category)')" />
+                                @php
+                                    // Prepare helpers for category selection logic
+                                    $categoryNames = $categories->pluck('name')->toArray();
+                                    $currentCategory = old('category', $entry->category);
+                                    $isExistingCategory = in_array($currentCategory, $categoryNames, true);
+                                @endphp
                                 <select id="category" name="category" class="block mt-1 w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
                                     <option value="">{{ __('སྡེ་ཚན་གདམ་ཀ') }} (Select Category)</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->name }}" {{ old('category', $entry->category) == $category->name ? 'selected' : '' }}>{{ $category->tibetan_name ?: $category->name }}</option>
+                                        <option value="{{ $category->name }}" {{ $currentCategory == $category->name ? 'selected' : '' }}>{{ $category->tibetan_name ?: $category->name }}</option>
                                     @endforeach
-                                    <option value="new_category" {{ !in_array(old('category', $entry->category), $categories->toArray()) && old('category', $entry->category) ? 'selected' : '' }}>{{ __('གསར་པ་སྣོན།') }} (Add New)</option>
+                                    <option value="new_category" {{ !$isExistingCategory && $currentCategory ? 'selected' : '' }}>{{ __('གསར་པ་སྣོན།') }} (Add New)</option>
                                 </select>
 
-                                <div id="new_category_input" class="mt-2 {{ !in_array(old('category', $entry->category), $categories->toArray()) && old('category', $entry->category) ? '' : 'hidden' }}">
-                                    <x-text-input id="new_category" class="block w-full" type="text" value="{{ !in_array(old('category', $entry->category), $categories->toArray()) ? old('category', $entry->category) : '' }}" placeholder="{{ __('སྡེ་ཚན་གསར་པ། (New Category)') }}" />
-                                    <p class="text-sm text-gray-500 mt-1">{{ __('སྡེ་ཚན་གསར་པ་བྲིས་ནས་ཟིན་བྲིས་ཉར་ཚགས་བྱེད་དུས་རང་འགུལ་གྱིས་སྣོན་ངེས།') }}</p>
+                                <div id="new_category_input" class="mt-2 {{ !$isExistingCategory && $currentCategory ? '' : 'hidden' }}">
+                                    <x-text-input id="new_category" class="block w-full" type="text" value="{{ !$isExistingCategory ? $currentCategory : '' }}" placeholder="{{ __('སྡེ་ཚན་གསར་པ། (New Category)') }}" />
                                 </div>
                                 <x-input-error :messages="$errors->get('category')" class="mt-2" />
                             </div>
@@ -63,7 +68,7 @@
                                         </label>
                                     @endforeach
                                 </div>
-                                <x-text-input id="tags" class="block w-full" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
+                                <x-text-input id="tags" class="block w-full" style="color: black;" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
                                 <p class="text-sm text-gray-500 mt-1">{{ __('དོན་ཚན་གསར་པ་ཁ་སྣོན་བྱེད་ན་དོན་ཚན་གཉིས་ཀྱི་པར་ལ་དབྱིན་ཇིའི་ཁོ་མ་ངེས་པར་དུ་འབྲི་དགོས།') }} (Separate new tags with commas)</p>
                             </div>
                             <x-input-error :messages="$errors->get('tags')" class="mt-2" />

@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MonlamMelongFinetuningController;
 use App\Http\Controllers\MonlamBenchmarkController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\HeartbeatController;
+use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -82,6 +84,15 @@ Route::middleware('auth')->group(function () {
 
     // Show benchmark route must come after specific routes
     Route::get('/benchmark/{monlamBenchmark}', [MonlamBenchmarkController::class, 'show'])->name('benchmark.show');
+
+    // Heartbeat endpoint for activity tracking
+    Route::post('/heartbeat', [HeartbeatController::class, 'store'])->name('heartbeat.store');
+
+    // Reports
+    Route::get('/reports/me', [ReportsController::class, 'user'])->name('reports.user');
+    Route::middleware(['\\App\\Http\\Middleware\\AdminMiddleware'])->group(function () {
+        Route::get('/admin/reports', [ReportsController::class, 'admin'])->name('reports.admin');
+    });
 });
 
 require __DIR__.'/auth.php';
