@@ -54,18 +54,56 @@
                         <div class="mb-6">
                             <x-input-label for="tags" :value="__('དོན་ཚན། (Tags - select or add new)')" />
                             <div class="mt-1 relative">
-                                <div class="flex flex-wrap gap-2 mb-2">
-                                    @foreach($tags as $tag)
-                                        <label class="inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm">
+                                <!-- Search Bar -->
+                                <div class="mb-2">
+                                    <input type="text" id="tagSearch" class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" 
+                                           placeholder="{{ __('དོན་ཚན་བཙལ་བ། (Search tags)...') }}">
+                                </div>
+                                
+                                <!-- Tags Container -->
+                                <div id="tagsContainer" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
+                                    @foreach($tags as $index => $tag)
+                                        <label class="tag-item inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm {{ $index >= 6 ? 'hidden more-tag' : '' }}" 
+                                               data-tag-name="{{ strtolower($tag->tibetan_name ?: $tag->name) }}">
                                             <input type="checkbox" name="selected_tags[]" value="{{ $tag->name }}" class="mr-1">
                                             {{ $tag->tibetan_name ?: $tag->name }}
                                         </label>
                                     @endforeach
                                 </div>
-                                <x-text-input id="tags" class="block w-full" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
+                                
+                                <!-- See More/Less Button -->
+                                @if(count($tags) > 6)
+                                    <button type="button" id="toggleTags" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none">
+                                        མུ་མཐུད་གཟིགས། ({{ count($tags) - 6 }} More)
+                                    </button>
+                                @endif
+                                
+                                <!-- New Tags Input -->
+                                <x-text-input id="tags" class="block w-full mt-2" style="color: black;" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
                                 <p class="text-sm text-gray-500 mt-1">{{ __('དོན་ཚན་གསར་པ་ཁ་སྣོན་བྱེད་ན་དོན་ཚན་གཉིས་ཀྱི་པར་ལ་དབྱིན་ཇིའི་ཁོ་མ་ངེས་པར་དུ་འབྲི་དགོས།') }} (Separate new tags with commas)</p>
                             </div>
                             <x-input-error :messages="$errors->get('tags')" class="mt-2" />
+                            
+                            <style>
+                                .tag-item {
+                                    transition: all 0.3s ease;
+                                }
+                                #tagsContainer {
+                                    scrollbar-width: thin;
+                                    scrollbar-color: #c7d2fe #e0e7ff;
+                                }
+                                #tagsContainer::-webkit-scrollbar {
+                                    width: 6px;
+                                }
+                                #tagsContainer::-webkit-scrollbar-track {
+                                    background: #e0e7ff;
+                                    border-radius: 3px;
+                                }
+                                #tagsContainer::-webkit-scrollbar-thumb {
+                                    background-color: #c7d2fe;
+                                    border-radius: 3px;
+                                }
+                            </style>
                         </div>
 
                         <div class="mb-6">
@@ -127,4 +165,49 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggleTags');
+            const tagSearch = document.getElementById('tagSearch');
+            const tagItems = document.querySelectorAll('.tag-item');
+            let showAll = false;
+            
+            console.log('Script loaded'); // Debug log
+            console.log('Toggle button:', toggleBtn); // Debug log
+            console.log('Tag items:', tagItems.length); // Debug log
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    console.log('Button clicked'); // Debug log
+                    e.preventDefault();
+                    showAll = !showAll;
+                    const moreTags = document.querySelectorAll('.more-tag');
+                    console.log('More tags found:', moreTags.length); // Debug log
+                    
+                    moreTags.forEach(tag => {
+                        tag.classList.toggle('hidden', !showAll);
+                    });
+                    
+                    toggleBtn.textContent = showAll 
+                        ? 'ཡོངས་བསྡུས། (Show Less)' 
+                        : `མུ་མཐུད་གཟིགས། (${tagItems.length - 6} More)`;
+                });
+            }
+            
+            if (tagSearch) {
+                tagSearch.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    tagItems.forEach(tag => {
+                        const tagName = tag.getAttribute('data-tag-name');
+                        if (tagName && tagName.includes(searchTerm)) {
+                            tag.classList.remove('hidden');
+                        } else {
+                            tag.classList.add('hidden');
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </x-app-layout>

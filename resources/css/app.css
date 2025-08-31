@@ -15,3 +15,9 @@ select#category {
 .grid.grid-cols-1.md\:grid-cols-2.gap-2 {
     padding: 6px;
 }
+
+/* Global typography: apply MonlamTBslim everywhere */
+* {
+    font-family: 'MonlamTBslim', sans-serif;
+    line-height: 2;
+}

@@ -1,31 +1,36 @@
-version: '3.8'
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: MelongApp
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
     volumes:
-      - .:/var/www
-    ports:
-      - "9000:9000"
+      - ./:/var/www
     networks:
       - MelongNet
 
   nginx:
     image: nginx:alpine
-    container_name: MelongNginx
-    ports:
-      - "8080:80"
-    volumes:
-      - .:/var/www
-      - ./nginx:/etc/nginx/conf.d
+    restart: unless-stopped
     depends_on:
       - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./nginx:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     networks:
       - MelongNet
 
 networks:
   MelongNet:
     driver: bridge
+
