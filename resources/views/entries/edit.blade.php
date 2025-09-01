@@ -59,17 +59,55 @@
                         <div class="mb-6">
                             <x-input-label for="tags" :value="__('རྒྱབ་མཐའ། (Tags - select or add new)')" />
                             <div class="mt-1 relative">
-                                <div class="flex flex-wrap gap-2 mb-2">
+                                <!-- Search Bar -->
+                                <div class="mb-2">
+                                    <input type="text" id="tagSearch" class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" 
+                                           placeholder="{{ __('དོན་ཚན་བཙལ་བ། (Search tags)...') }}">
+                                </div>
+                                
+                                <!-- Tags Container -->
+                                <div id="tagsContainer" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
                                     @php $entryTagsArray = $entry->tags ? explode(',', $entry->tags) : []; @endphp
-                                    @foreach($tags as $tag)
-                                        <label class="inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm">
+                                    @foreach($tags as $index => $tag)
+                                        <label class="tag-item inline-flex items-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm {{ $index >= 6 ? 'hidden more-tag' : '' }}" 
+                                               data-tag-name="{{ strtolower($tag->tibetan_name ?: $tag->name) }}">
                                             <input type="checkbox" name="selected_tags[]" value="{{ $tag->name }}" class="mr-1" {{ in_array($tag->name, $entryTagsArray) ? 'checked' : '' }}>
                                             {{ $tag->tibetan_name ?: $tag->name }}
                                         </label>
                                     @endforeach
                                 </div>
-                                <x-text-input id="tags" class="block w-full" style="color: black;" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)') }}" />
+                                
+                                <!-- See More/Less Button -->
+                                @if(count($tags) > 6)
+                                    <button type="button" id="toggleTags" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none">
+                                        མུ་མཐུད་གཟིགས། ({{ count($tags) - 6 }} More)
+                                    </button>
+                                @endif
+                                
+                                <!-- New Tags Input -->
+                                <x-text-input id="tags" class="block w-full mt-2" style="color: black;" type="text" name="tags" :value="old('tags')" placeholder="{{ __('གསར་པ་སྣོན། (Add new tags, comma separated)' ) }}" />
                                 <p class="text-sm text-gray-500 mt-1">{{ __('དོན་ཚན་གསར་པ་ཁ་སྣོན་བྱེད་ན་དོན་ཚན་གཉིས་ཀྱི་པར་ལ་དབྱིན་ཇིའི་ཁོ་མ་ངེས་པར་དུ་འབྲི་དགོས།') }} (Separate new tags with commas)</p>
+                                
+                                <style>
+                                    .tag-item {
+                                        transition: all 0.3s ease;
+                                    }
+                                    #tagsContainer {
+                                        scrollbar-width: thin;
+                                        scrollbar-color: #c7d2fe #e0e7ff;
+                                    }
+                                    #tagsContainer::-webkit-scrollbar {
+                                        width: 6px;
+                                    }
+                                    #tagsContainer::-webkit-scrollbar-track {
+                                        background: #e0e7ff;
+                                        border-radius: 3px;
+                                    }
+                                    #tagsContainer::-webkit-scrollbar-thumb {
+                                        background-color: #c7d2fe;
+                                        border-radius: 3px;
+                                    }
+                                </style>
                             </div>
                             <x-input-error :messages="$errors->get('tags')" class="mt-2" />
                         </div>
@@ -194,4 +232,92 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggleTags');
+            const tagSearch = document.getElementById('tagSearch');
+            const tagsContainer = document.getElementById('tagsContainer');
+            let showAll = false;
+            
+            // Function to sort tags with checked ones first
+            function sortTags() {
+                const tagItems = Array.from(document.querySelectorAll('.tag-item'));
+                
+                // Sort tags: checked first, then sort by name
+                tagItems.sort((a, b) => {
+                    const aChecked = a.querySelector('input[type="checkbox"]').checked;
+                    const bChecked = b.querySelector('input[type="checkbox"]').checked;
+                    
+                    if (aChecked && !bChecked) return -1;
+                    if (!aChecked && bChecked) return 1;
+                    
+                    const aName = a.getAttribute('data-tag-name');
+                    const bName = b.getAttribute('data-tag-name');
+                    return aName.localeCompare(bName);
+                });
+                
+                // Re-append tags in new order
+                tagItems.forEach(tag => tagsContainer.appendChild(tag));
+                
+                // Update visibility based on showAll state
+                updateTagVisibility();
+            }
+            
+            // Function to update tag visibility
+            function updateTagVisibility() {
+                const tagItems = document.querySelectorAll('.tag-item');
+                tagItems.forEach((tag, index) => {
+                    const isVisible = index < 6 || showAll || tag.querySelector('input[type="checkbox"]').checked;
+                    tag.style.display = isVisible ? 'flex' : 'none';
+                });
+                
+                // Update show more/less button text if it exists
+                if (toggleBtn) {
+                    const hiddenCount = Array.from(tagItems).filter((_, i) => i >= 6 && !showAll).length;
+                    toggleBtn.textContent = showAll 
+                        ? 'ཡོངས་བསྡུས། (Show Less)' 
+                        : `མུ་མཐུད་གཟིགས། (${hiddenCount} More)`;
+                }
+            }
+            
+            // Initial sort
+            sortTags();
+            
+            // Toggle show all/hide
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showAll = !showAll;
+                    updateTagVisibility();
+                });
+            }
+            
+            // Search functionality
+            if (tagSearch) {
+                tagSearch.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const tagItems = document.querySelectorAll('.tag-item');
+                    
+                    tagItems.forEach(tag => {
+                        const tagName = tag.getAttribute('data-tag-name');
+                        const isVisible = tagName.includes(searchTerm);
+                        tag.style.display = isVisible ? 'flex' : 'none';
+                    });
+                    
+                    // Reset visibility when search is cleared
+                    if (!searchTerm) {
+                        updateTagVisibility();
+                    }
+                });
+            }
+            
+            // Update sort when any checkbox is clicked
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('input[type="checkbox"]')) {
+                    sortTags();
+                }
+            });
+        });
+    </script>
 </x-app-layout>
