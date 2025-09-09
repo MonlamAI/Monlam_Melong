@@ -50,6 +50,9 @@ class MonlamMelongFinetuningController extends Controller
                 ->when($request->status, function($query) use ($request) {
                     return $query->where('status', $request->status);
                 })
+                ->when($request->author && $request->user()->isAdmin(), function($query) use ($request) {
+                    return $query->where('user_id', $request->author);
+                })
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
         }
@@ -62,6 +65,9 @@ class MonlamMelongFinetuningController extends Controller
                 })
                 ->when($request->status, function($query) use ($request) {
                     return $query->where('status', $request->status);
+                })
+                ->when($request->author && $request->user()->isAdmin(), function($query) use ($request) {
+                    return $query->where('user_id', $request->author);
                 })
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
@@ -88,14 +94,32 @@ class MonlamMelongFinetuningController extends Controller
                 $query->where('status', $request->status);
             }
             
+            // Apply author filter if provided and user is admin
+            if ($request->author && $user->isAdmin()) {
+                $query->where('user_id', $request->author);
+            }
+            
             $entries = $query->orderBy('created_at', 'desc')->paginate(10);
         }
 
         // Get unique categories and tags for filtering
         $categories = $this->getUniqueCategories();
         $tags = $this->getUniqueTags();
+        
+        // Get unique authors for the filter
+        $authors = \App\Models\User::whereHas('entries')
+            ->select('id', 'name')
+            ->get();
 
-        return view('entries.index', compact('entries', 'categories', 'tags'));
+        // Get current filter values
+        $filters = [
+            'category' => $request->category,
+            'status' => $request->status,
+            'author' => $request->author,
+            'hasFilters' => $request->has('category') || $request->has('status') || $request->has('author')
+        ];
+
+        return view('entries.index', compact('entries', 'categories', 'tags', 'authors', 'filters'));
     }
 
     /**

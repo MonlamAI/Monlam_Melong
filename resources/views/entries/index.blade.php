@@ -24,6 +24,37 @@
 
                     <!-- Filters -->
                     <div class="mb-6">
+                        @if($filters['hasFilters'])
+                        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Active Filters') }}:</span>
+                                    @if($filters['category'])
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                            {{ __('Category') }}: {{ $categories->firstWhere('name', $filters['category'])->tibetan_name ?? $filters['category'] }}
+                                        </span>
+                                    @endif
+                                    @if($filters['status'])
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            {{ __('Status') }}: {{ __(ucfirst($filters['status'])) }}
+                                        </span>
+                                    @endif
+                                    @if($filters['author'] && auth()->user()->isAdmin())
+                                        @php
+                                            $author = $authors->firstWhere('id', $filters['author']);
+                                        @endphp
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                            {{ __('Author') }}: {{ $author->name ?? 'Unknown' }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <a href="{{ route('entries.index') }}" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                    {{ __('Clear All') }}
+                                </a>
+                            </div>
+                        </div>
+                        @endif
+                        
                         <form action="{{ route('entries.index') }}" method="GET" class="flex items-end gap-4 flex-wrap">
                             <div>
                                 <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('སྡེ་ཚན།') }} (Category)</label>
@@ -50,10 +81,27 @@
                                 </div>
                             @endif
 
+                            @if(auth()->user()->isAdmin())
                             <div>
-                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-white dark:text-gray-800 uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-white focus:bg-gray-700 dark:focus:bg-white active:bg-gray-900 dark:active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
+                                <label for="author" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('རྩོམ་སྒྲིག་མཁན།') }} (Author)</label>
+                                <select name="author" id="author" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">{{ __('རྩོམ་སྒྲིག་མཁན་ཚང་མ།') }} (All Authors)</option>
+                                    @foreach($authors as $author)
+                                        <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+
+                            <div class="flex space-x-2">
+                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
                                     {{ __('འཚོལ།') }} (Filter)
                                 </button>
+                                @if($filters['hasFilters'])
+                                <a href="{{ route('entries.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
+                                    {{ __('བཤེར་སྒྲིག་བཤིག་སྒྲོམ།') }} (Clear)
+                                </a>
+                                @endif
                             </div>
                         </form>
                     </div>
@@ -153,8 +201,29 @@
                     </div>
 
                     <div class="mt-4">
-                        {{ $entries->links() }}
+                        {{ $entries->appends(request()->query())->links() }}
                     </div>
+                    
+                    <script>
+                        // This ensures that any dynamically added pagination links also maintain the filters
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Get all pagination links
+                            const paginationLinks = document.querySelectorAll('.pagination a');
+                            const currentUrl = new URL(window.location.href);
+                            const searchParams = new URLSearchParams(currentUrl.search);
+                            
+                            // Add current filters to pagination links
+                            paginationLinks.forEach(link => {
+                                const linkUrl = new URL(link.href);
+                                searchParams.forEach((value, key) => {
+                                    if (key !== 'page') {
+                                        linkUrl.searchParams.set(key, value);
+                                    }
+                                });
+                                link.href = linkUrl.toString();
+                            });
+                        });
+                    </script>
                 </div>
             </div>
         </div>
