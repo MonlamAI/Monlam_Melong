@@ -93,6 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['\\App\\Http\\Middleware\\AdminMiddleware'])->group(function () {
         Route::get('/admin/reports', [ReportsController::class, 'admin'])->name('reports.admin');
     });
+    
 });
 
 require __DIR__.'/auth.php';
