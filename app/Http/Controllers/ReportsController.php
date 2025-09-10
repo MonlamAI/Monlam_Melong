@@ -15,16 +15,53 @@ class ReportsController extends Controller
         $user = Auth::user();
         $period = $request->get('period', 'daily'); // hourly|daily|weekly|monthly|yearly
         [$start, $end] = $this->resolveDateRange($request);
+        $category = $request->get('category');
+        $status = $request->get('status');
 
-        $active = $this->aggregateActiveMinutes($user->id, $period, $start, $end);
-        $words = $this->aggregateWords($user->id, $period, $start, $end);
+        // Get user's entries data using the same logic as admin reports
+        $entriesQuery = \App\Models\MonlamMelongFinetuning::where('user_id', $user->id)
+            ->when($category, function($query) use ($category) {
+                return $query->where('category', $category);
+            })
+            ->when($status, function($query) use ($status) {
+                return $query->where('status', $status);
+            })
+            ->whereBetween('created_at', [$start, $end]);
+
+        $entries = $entriesQuery->get();
+
+        // Get categories for filtering (respecting user's allowed categories)
+        $categories = \App\Models\Category::orderBy('name')->get();
+        if (!$user->isAdmin() && !$user->isChiefEditor() && !empty($user->allowed_categories)) {
+            $categories = $categories->filter(function($category) use ($user) {
+                return in_array($category->name, $user->allowed_categories);
+            });
+        }
+
+        // Generate reports based on user's entries data
+        $reports = $this->generateReportsFromEntries($entries, $period, $start, $end);
+
+        // Compute user's word totals from activity logs
+        $userWordCounts = DB::table('entry_activity_logs as log')
+            ->where('log.user_id', $user->id)
+            ->when($category, function($q) use ($category) {
+                $q->where('log.category', $category);
+            })
+            ->whereBetween('log.occurred_at', [$start, $end])
+            ->select(DB::raw('COALESCE(SUM(log.words_created + log.words_edited), 0) as total_words'))
+            ->value('total_words');
 
         return view('reports.user', [
             'period' => $period,
             'start' => $start,
             'end' => $end,
-            'active' => $active,
-            'words' => $words,
+            'categories' => $categories,
+            'selectedCategory' => $category,
+            'selectedStatus' => $status,
+            'reports' => $reports,
+            'totalEntries' => $entries->count(),
+            'userWordCounts' => $userWordCounts,
+            'user' => $user,
         ]);
     }
 
