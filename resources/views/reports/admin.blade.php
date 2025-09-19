@@ -223,43 +223,6 @@
                         @endif
                     </div>
 
-                    <!-- Time Series Chart -->
-                    <div class="mb-8">
-                        <h3 class="text-lg font-semibold mb-4">{{ __('དུས་ཚོགས་ཀྱི་སྙོམས་འགྲུབ།') }} (Time Series)</h3>
-                        @if($reports['time_series']->count() > 0)
-                            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border">
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left text-sm border-collapse">
-                                        <thead class="bg-gray-50 dark:bg-gray-700">
-                                            <tr>
-                                                <th class="border-b py-2 px-3 font-medium">{{ __('Date') }}</th>
-                                                <th class="border-b py-2 px-3 font-medium text-right">{{ __('Total Entries') }}</th>
-                                                @foreach($reports['category_stats']->keys() as $category)
-                                                    <th class="border-b py-2 px-3 font-medium text-right">{{ $categories->firstWhere('name', $category)->tibetan_name ?? $category }}</th>
-                                                @endforeach
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($reports['time_series'] as $period)
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                                    <td class="border-b py-2 px-3">{{ $period['date']->format('Y-m-d') }}</td>
-                                                    <td class="border-b py-2 px-3 text-right font-semibold">{{ number_format($period['total_entries']) }}</td>
-                                                    @foreach($reports['category_stats']->keys() as $category)
-                                                        <td class="border-b py-2 px-3 text-right">{{ number_format($period['by_category'][$category] ?? 0) }}</td>
-                                                    @endforeach
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        @else
-                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                                <p>{{ __('No time series data available for the selected period.') }}</p>
-                            </div>
-                        @endif
-                    </div>
-
                     <!-- User Statistics -->
                     <div class="mb-8">
                         <h3 class="text-lg font-semibold mb-4">{{ __('རྩོམ་སྒྲིག་མཁན་ཚོགས་ཀྱི་སྙོམས་འགྲུབ།') }} (Contributor Statistics)</h3>
@@ -301,6 +264,43 @@
                         @else
                             <div class="text-center py-8 text-gray-500 dark:text-gray-400">
                                 <p>{{ __('No contributor data available for the selected period.') }}</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Time Series Chart -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">{{ __('དུས་ཚོགས་ཀྱི་སྙོམས་འགྲུབ།') }} (Time Series)</h3>
+                        @if($reports['time_series']->count() > 0)
+                            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-sm border-collapse">
+                                        <thead class="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                <th class="border-b py-2 px-3 font-medium">{{ __('Date') }}</th>
+                                                <th class="border-b py-2 px-3 font-medium text-right">{{ __('Total Entries') }}</th>
+                                                @foreach($reports['category_stats']->keys() as $category)
+                                                    <th class="border-b py-2 px-3 font-medium text-right">{{ $categories->firstWhere('name', $category)->tibetan_name ?? $category }}</th>
+                                                @endforeach
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($reports['time_series'] as $period)
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                    <td class="border-b py-2 px-3">{{ $period['date']->format('Y-m-d') }}</td>
+                                                    <td class="border-b py-2 px-3 text-right font-semibold">{{ number_format($period['total_entries']) }}</td>
+                                                    @foreach($reports['category_stats']->keys() as $category)
+                                                        <td class="border-b py-2 px-3 text-right">{{ number_format($period['by_category'][$category] ?? 0) }}</td>
+                                                    @endforeach
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @else
+                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                <p>{{ __('No time series data available for the selected period.') }}</p>
                             </div>
                         @endif
                     </div>

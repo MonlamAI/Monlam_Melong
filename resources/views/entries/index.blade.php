@@ -223,6 +223,120 @@
                                 link.href = linkUrl.toString();
                             });
                         });
+
+                        // Dynamic author filtering based on category selection
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const categorySelect = document.getElementById('category');
+                            const authorSelect = document.getElementById('author');
+                            
+                            if (categorySelect && authorSelect) {
+                                // Store original authors data
+                                const originalAuthors = Array.from(authorSelect.options).map(option => ({
+                                    value: option.value,
+                                    text: option.text,
+                                    selected: option.selected
+                                }));
+                                
+                                function updateAuthorDropdown(authors) {
+                                    // Clear current author options
+                                    authorSelect.innerHTML = '';
+                                    
+                                    // Add "All Authors" option
+                                    const allOption = document.createElement('option');
+                                    allOption.value = '';
+                                    allOption.text = '{{ __("རྩོམ་སྒྲིག་མཁན་ཚང་མ།") }} ({{ __("All Authors") }})';
+                                    authorSelect.appendChild(allOption);
+                                    
+                                    // Add authors
+                                    authors.forEach(author => {
+                                        const option = document.createElement('option');
+                                        option.value = author.id;
+                                        option.text = author.name;
+                                        authorSelect.appendChild(option);
+                                    });
+                                }
+                                
+                                function restoreOriginalAuthors() {
+                                    // Clear current author options
+                                    authorSelect.innerHTML = '';
+                                    
+                                    // Restore original authors
+                                    originalAuthors.forEach(author => {
+                                        const option = document.createElement('option');
+                                        option.value = author.value;
+                                        option.text = author.text;
+                                        option.selected = author.selected;
+                                        authorSelect.appendChild(option);
+                                    });
+                                }
+                                
+                                categorySelect.addEventListener('change', function() {
+                                    const selectedCategory = this.value;
+                                    
+                                    if (selectedCategory) {
+                                        // Show loading state
+                                        authorSelect.innerHTML = '<option value="">Loading...</option>';
+                                        
+                                        // Create a form to submit the request
+                                        const form = document.createElement('form');
+                                        form.method = 'GET';
+                                        form.action = '{{ route("entries.index") }}';
+                                        
+                                        // Add category parameter
+                                        const categoryInput = document.createElement('input');
+                                        categoryInput.type = 'hidden';
+                                        categoryInput.name = 'category';
+                                        categoryInput.value = selectedCategory;
+                                        form.appendChild(categoryInput);
+                                        
+                                        // Add ajax parameter
+                                        const ajaxInput = document.createElement('input');
+                                        ajaxInput.type = 'hidden';
+                                        ajaxInput.name = 'ajax';
+                                        ajaxInput.value = '1';
+                                        form.appendChild(ajaxInput);
+                                        
+                                        // Submit the form
+                                        document.body.appendChild(form);
+                                        
+                                        // Use fetch with the form data
+                                        const formData = new FormData(form);
+                                        const url = new URL(form.action);
+                                        url.search = new URLSearchParams(formData).toString();
+                                        
+                                        fetch(url.toString(), {
+                                            method: 'GET',
+                                            headers: {
+                                                'X-Requested-With': 'XMLHttpRequest',
+                                                'Accept': 'application/json',
+                                            },
+                                            credentials: 'same-origin'
+                                        })
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error(`HTTP error! status: ${response.status}`);
+                                            }
+                                            return response.json();
+                                        })
+                                        .then(data => {
+                                            updateAuthorDropdown(data.authors);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error fetching authors:', error);
+                                            // Fallback: restore original authors
+                                            restoreOriginalAuthors();
+                                        })
+                                        .finally(() => {
+                                            // Clean up the form
+                                            document.body.removeChild(form);
+                                        });
+                                    } else {
+                                        // No category selected, show all authors
+                                        restoreOriginalAuthors();
+                                    }
+                                });
+                            }
+                        });
                     </script>
                 </div>
             </div>

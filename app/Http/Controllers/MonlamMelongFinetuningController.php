@@ -107,9 +107,16 @@ class MonlamMelongFinetuningController extends Controller
         $tags = $this->getUniqueTags();
         
         // Get unique authors for the filter
-        $authors = \App\Models\User::whereHas('entries')
-            ->select('id', 'name')
-            ->get();
+        // If a category is selected, only show authors who have entries in that category
+        $authorsQuery = \App\Models\User::whereHas('entries');
+        
+        if ($request->category) {
+            $authorsQuery->whereHas('entries', function($query) use ($request) {
+                $query->where('category', $request->category);
+            });
+        }
+        
+        $authors = $authorsQuery->select('id', 'name')->get();
 
         // Get current filter values
         $filters = [
@@ -118,6 +125,18 @@ class MonlamMelongFinetuningController extends Controller
             'author' => $request->author,
             'hasFilters' => $request->has('category') || $request->has('status') || $request->has('author')
         ];
+
+        // If this is an AJAX request for authors, return JSON data
+        if ($request->ajax() || $request->has('ajax')) {
+            return response()->json([
+                'authors' => $authors->map(function($author) {
+                    return [
+                        'id' => $author->id,
+                        'name' => $author->name
+                    ];
+                })->toArray()
+            ]);
+        }
 
         return view('entries.index', compact('entries', 'categories', 'tags', 'authors', 'filters'));
     }
@@ -282,6 +301,16 @@ class MonlamMelongFinetuningController extends Controller
             unset($validated['status']);
         }
 
+        // For approved/rejected entries, check if status can be changed within 10-minute window
+        if (isset($validated['status']) && in_array($entry->status, ['approved', 'rejected'])) {
+            if (!$entry->canChangeStatus()) {
+                return redirect()->back()->with('error', 'Cannot change status. The 10-minute editing window has expired or status has already been edited.');
+            }
+            
+            // Mark that status has been edited in this window
+            $validated['status_edited_in_window'] = true;
+        }
+
         // Calculate word edit delta before update
         $oldWords = $this->countWords(($entry->question ?? '') . ' ' . ($entry->answer ?? ''));
 
@@ -388,13 +417,53 @@ class MonlamMelongFinetuningController extends Controller
             ->when($request->category, function($query) use ($request) {
                 return $query->where('category', $request->category);
             })
+            ->when($request->author && $user->isAdmin(), function($query) use ($request) {
+                return $query->where('user_id', $request->author);
+            })
             ->orderBy('updated_at', 'asc') // Oldest submissions first
             ->paginate(10);
 
         // Get categories for filter
         $categories = $this->getUniqueCategories();
+        
+        // Get unique authors for the filter (only for admins)
+        // If a category is selected, only show authors who have pending entries in that category
+        $authors = collect();
+        if ($user->isAdmin()) {
+            $authorsQuery = \App\Models\User::whereHas('entries', function($query) {
+                $query->where('status', 'pending');
+            });
+            
+            if ($request->category) {
+                $authorsQuery->whereHas('entries', function($query) use ($request) {
+                    $query->where('status', 'pending')
+                          ->where('category', $request->category);
+                });
+            }
+            
+            $authors = $authorsQuery->select('id', 'name')->get();
+        }
 
-        return view('entries.review-queue', compact('pendingEntries', 'categories'));
+        // Get current filter values
+        $filters = [
+            'category' => $request->category,
+            'author' => $request->author,
+            'hasFilters' => $request->has('category') || $request->has('author')
+        ];
+
+        // If this is an AJAX request for authors, return JSON data
+        if ($request->ajax() || $request->has('ajax')) {
+            return response()->json([
+                'authors' => $authors->map(function($author) {
+                    return [
+                        'id' => $author->id,
+                        'name' => $author->name
+                    ];
+                })->toArray()
+            ]);
+        }
+
+        return view('entries.review-queue', compact('pendingEntries', 'categories', 'authors', 'filters'));
     }
 
     /**
@@ -416,6 +485,8 @@ class MonlamMelongFinetuningController extends Controller
         ]);
 
         $entry->status = $validated['status'];
+        $entry->status_updated_at = now();
+        $entry->status_edited_in_window = false; // Reset the flag for new status
         
         // Save feedback if provided (especially important for rejected entries)
         if (isset($validated['feedback'])) {
@@ -470,11 +541,17 @@ class MonlamMelongFinetuningController extends Controller
             return false;
         }
 
-        // Editor can edit their own entries if they're not approved and in their allowed categories
-        if ($entry->user_id === $user->id && 
-            $entry->status !== 'approved' && 
-            $user->canAccessCategory($entry->category)) {
-            return true;
+        // Editor can edit their own entries if they're not approved/rejected OR within 10-minute window
+        if ($entry->user_id === $user->id && $user->canAccessCategory($entry->category)) {
+            // Allow editing if status is not approved/rejected
+            if (!in_array($entry->status, ['approved', 'rejected'])) {
+                return true;
+            }
+            
+            // Allow editing if within 10-minute window for approved/rejected entries
+            if ($entry->canChangeStatus()) {
+                return true;
+            }
         }
 
         return false;
