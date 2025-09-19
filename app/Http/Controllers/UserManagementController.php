@@ -20,10 +20,40 @@ class UserManagementController extends Controller
     /**
      * Display a listing of the users.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::orderBy('name')->get();
-        return view('admin.users.index', compact('users'));
+        $query = User::query();
+        
+        // Apply role filter if provided
+        if ($request->has('role') && $request->role) {
+            $query->where('role', $request->role);
+        }
+        
+        // Apply search filter if provided
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+        
+        $users = $query->orderBy('name')->paginate(10);
+        
+        // Get unique roles for filter dropdown
+        $roles = User::select('role')
+            ->distinct()
+            ->orderBy('role')
+            ->pluck('role');
+        
+        // Get current filter values
+        $filters = [
+            'role' => $request->role,
+            'search' => $request->search,
+            'hasFilters' => $request->has('role') || $request->has('search')
+        ];
+        
+        return view('admin.users.index', compact('users', 'roles', 'filters'));
     }
     
     /**

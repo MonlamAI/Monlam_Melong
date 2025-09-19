@@ -25,6 +25,36 @@
                 <div class="p-6 text-gray-900 dark:text-gray-100">
                     <h3 class="text-lg font-medium mb-6">{{ __('བསྐྱར་ཞིབ་ལ་བསྒུག་པའི་དྲི་བ་དྲིས་ལན།') }} (Entries Pending Review)</h3>
 
+                    <!-- Active Filters Display -->
+                    @if($filters['hasFilters'])
+                    <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Active Filters') }}:</span>
+                                @if($filters['category'])
+                                    @php
+                                        $category = $categories->firstWhere('name', $filters['category']);
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                        {{ __('སྡེ་ཚན།') }}: {{ $category->tibetan_name ?? $filters['category'] }}
+                                    </span>
+                                @endif
+                                @if($filters['author'] && auth()->user()->isAdmin())
+                                    @php
+                                        $author = $authors->firstWhere('id', $filters['author']);
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                        {{ __('རྩོམ་སྒྲིག་མཁན།') }}: {{ $author->name ?? 'Unknown' }}
+                                    </span>
+                                @endif
+                            </div>
+                            <a href="{{ route('entries.review-queue') }}" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                {{ __('Clear All') }}
+                            </a>
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- Filters -->
                     <div class="mb-6">
                         <form action="{{ route('entries.review-queue') }}" method="GET" class="flex items-end gap-4 flex-wrap">
@@ -40,10 +70,27 @@
                                 </select>
                             </div>
 
+                            @if(auth()->user()->isAdmin())
                             <div>
+                                <label for="author" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('རྩོམ་སྒྲིག་མཁན།') }} (Author)</label>
+                                <select name="author" id="author" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">{{ __('རྩོམ་སྒྲིག་མཁན་ཚང་མ།') }} (All Authors)</option>
+                                    @foreach($authors as $author)
+                                        <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+
+                            <div class="flex space-x-2">
                                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-white dark:text-gray-800 uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-white focus:bg-gray-700 dark:focus:bg-white active:bg-gray-900 dark:active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
                                     {{ __('འཚོལ།') }} (Filter)
                                 </button>
+                                @if($filters['hasFilters'])
+                                    <a href="{{ route('entries.review-queue') }}" class="inline-flex items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-600 focus:bg-gray-600 active:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
+                                        {{ __('Clear All') }}
+                                    </a>
+                                @endif
                             </div>
                         </form>
                     </div>
@@ -88,7 +135,7 @@
                         </div>
 
                         <div class="mt-4">
-                            {{ $pendingEntries->links() }}
+                            {{ $pendingEntries->appends(request()->query())->links() }}
                         </div>
                     @else
                         <div class="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -100,3 +147,138 @@
         </div>
     </div>
 </x-app-layout>
+
+<script>
+    // This ensures that any dynamically added pagination links also maintain the filters
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all pagination links
+        const paginationLinks = document.querySelectorAll('.pagination a');
+        const currentUrl = new URL(window.location.href);
+        const searchParams = new URLSearchParams(currentUrl.search);
+        
+        // Add current filters to pagination links
+        paginationLinks.forEach(link => {
+            const linkUrl = new URL(link.href);
+            searchParams.forEach((value, key) => {
+                if (key !== 'page') {
+                    linkUrl.searchParams.set(key, value);
+                }
+            });
+            link.href = linkUrl.toString();
+        });
+    });
+
+    // Dynamic author filtering based on category selection
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category');
+        const authorSelect = document.getElementById('author');
+        
+        if (categorySelect && authorSelect) {
+            // Store original authors data
+            const originalAuthors = Array.from(authorSelect.options).map(option => ({
+                value: option.value,
+                text: option.text,
+                selected: option.selected
+            }));
+            
+            function updateAuthorDropdown(authors) {
+                // Clear current author options
+                authorSelect.innerHTML = '';
+                
+                // Add "All Authors" option
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.text = '{{ __("རྩོམ་སྒྲིག་མཁན་ཚང་མ།") }} ({{ __("All Authors") }})';
+                authorSelect.appendChild(allOption);
+                
+                // Add authors
+                authors.forEach(author => {
+                    const option = document.createElement('option');
+                    option.value = author.id;
+                    option.text = author.name;
+                    authorSelect.appendChild(option);
+                });
+            }
+            
+            function restoreOriginalAuthors() {
+                // Clear current author options
+                authorSelect.innerHTML = '';
+                
+                // Restore original authors
+                originalAuthors.forEach(author => {
+                    const option = document.createElement('option');
+                    option.value = author.value;
+                    option.text = author.text;
+                    option.selected = author.selected;
+                    authorSelect.appendChild(option);
+                });
+            }
+            
+            categorySelect.addEventListener('change', function() {
+                const selectedCategory = this.value;
+                
+                if (selectedCategory) {
+                    // Show loading state
+                    authorSelect.innerHTML = '<option value="">Loading...</option>';
+                    
+                    // Create a form to submit the request
+                    const form = document.createElement('form');
+                    form.method = 'GET';
+                    form.action = '{{ route("entries.review-queue") }}';
+                    
+                    // Add category parameter
+                    const categoryInput = document.createElement('input');
+                    categoryInput.type = 'hidden';
+                    categoryInput.name = 'category';
+                    categoryInput.value = selectedCategory;
+                    form.appendChild(categoryInput);
+                    
+                    // Add ajax parameter
+                    const ajaxInput = document.createElement('input');
+                    ajaxInput.type = 'hidden';
+                    ajaxInput.name = 'ajax';
+                    ajaxInput.value = '1';
+                    form.appendChild(ajaxInput);
+                    
+                    // Submit the form
+                    document.body.appendChild(form);
+                    
+                    // Use fetch with the form data
+                    const formData = new FormData(form);
+                    const url = new URL(form.action);
+                    url.search = new URLSearchParams(formData).toString();
+                    
+                    fetch(url.toString(), {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        updateAuthorDropdown(data.authors);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching authors:', error);
+                        // Fallback: restore original authors
+                        restoreOriginalAuthors();
+                    })
+                    .finally(() => {
+                        // Clean up the form
+                        document.body.removeChild(form);
+                    });
+                } else {
+                    // No category selected, show all authors
+                    restoreOriginalAuthors();
+                }
+            });
+        }
+    });
+</script>
