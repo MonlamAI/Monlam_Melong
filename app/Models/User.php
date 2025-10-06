@@ -240,7 +240,7 @@ class User extends Authenticatable
         // Cache the result for 5 minutes
         return Cache::remember($cacheKey, 300, function () {
             // Check role-based permissions
-            if ($this->isAdmin() || $this->isBenchmarkEditor() || $this->isChiefEditor()) {
+            if ($this->isAdmin() || $this->isBenchmarkEditor() || $this->isChiefEditor() || $this->isEditor()) {
                 return true;
             }
             
@@ -562,7 +562,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -582,7 +582,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -602,7 +602,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -622,7 +622,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -642,7 +642,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -662,7 +662,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -682,7 +682,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
@@ -702,7 +702,7 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isBenchmarkEditor() || $this->isEditor()) {
             return true;
         }
 
