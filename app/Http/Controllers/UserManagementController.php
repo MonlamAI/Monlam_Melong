@@ -176,9 +176,27 @@ class UserManagementController extends Controller
             $user->password = Hash::make($request->password);
         }
         
-        $user->save();
+        $user->update([
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'allowed_categories' => $user->allowed_categories,
+            'permissions' => $user->permissions,
+            'password' => $user->password,
+        ]);
         
         return redirect()->route('admin.users.index')
             ->with('success', 'User updated successfully.');
+    }
+    
+    /**
+     * Clear permission caches for a specific user
+     */
+    public function clearUserCache(User $user)
+    {
+        $user->clearPermissionCaches();
+        
+        return redirect()->route('admin.users.index')
+            ->with('success', "Permission caches cleared for {$user->name}.");
     }
 }
