@@ -11,11 +11,47 @@ class MonlamBenchmarkController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Authentication is handled by middleware
-        $benchmarks = MonlamBenchmark::orderBy('created_at', 'desc')->paginate(15);
-        return view('benchmark.index', compact('benchmarks'));
+        $query = MonlamBenchmark::query()->orderBy('created_at', 'desc');
+
+        $filters = [
+            'subject' => trim((string) $request->get('subject', '')),
+            'author' => trim((string) $request->get('author', '')),
+        ];
+
+        // Track if any filters are active for UI
+        $filters['hasFilters'] = ($filters['subject'] !== '' || $filters['author'] !== '');
+
+        if ($filters['subject'] !== '') {
+            $query->where('subject', 'like', '%' . $filters['subject'] . '%');
+        }
+
+        if ($filters['author'] !== '') {
+            $query->where(function ($q) use ($filters) {
+                $q->where('created_by', 'like', '%' . $filters['author'] . '%');
+            });
+        }
+
+        $benchmarks = $query->paginate(15);
+
+        // Dropdown sources
+        $subjects = MonlamBenchmark::query()
+            ->whereNotNull('subject')
+            ->where('subject', '!=', '')
+            ->distinct()
+            ->orderBy('subject')
+            ->pluck('subject');
+
+        $authors = MonlamBenchmark::query()
+            ->whereNotNull('created_by')
+            ->where('created_by', '!=', '')
+            ->distinct()
+            ->orderBy('created_by')
+            ->pluck('created_by');
+
+        return view('benchmark.index', compact('benchmarks', 'filters', 'subjects', 'authors'));
     }
 
     /**

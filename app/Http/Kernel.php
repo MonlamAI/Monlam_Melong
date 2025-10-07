@@ -60,5 +60,7 @@ class Kernel extends HttpKernel
         'admin' => \App\Http\Middleware\AdminMiddleware::class, // Register our new admin middleware
         'category.access' => \App\Http\Middleware\CategoryAccessMiddleware::class, // Register category access middleware
         'benchmark.manage' => \App\Http\Middleware\BenchmarkManagementMiddleware::class, // Register benchmark management middleware
+        'tags.manage' => \App\Http\Middleware\TagManagementMiddleware::class,
+        'users.manage' => \App\Http\Middleware\UserManagementMiddleware::class,
     ];
 }
