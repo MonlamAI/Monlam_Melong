@@ -239,12 +239,41 @@ class User extends Authenticatable
         
         // Cache the result for 5 minutes
         return Cache::remember($cacheKey, 300, function () {
-            // Check role-based permissions
-            if ($this->isAdmin() || $this->isBenchmarkEditor() || $this->isChiefEditor() || $this->isEditor()) {
+            // Admin, Chief Editor, and Benchmark Editor always have access
+            if ($this->isAdmin() || $this->isBenchmarkEditor() || $this->isChiefEditor()) {
                 return true;
             }
             
-            // Check if specific permission is set in the permissions matrix
+            // For Editor role, check if they have specific benchmark permissions
+            if ($this->isEditor()) {
+                // Check if specific permission is set in the permissions matrix
+                if (isset($this->permissions['own_benchmark']) || isset($this->permissions['all_benchmark'])) {
+                    // Check if user has any CRUD permission for own benchmarks
+                    if (isset($this->permissions['own_benchmark'])) {
+                        if (isset($this->permissions['own_benchmark']['create']) && $this->permissions['own_benchmark']['create'] ||
+                            isset($this->permissions['own_benchmark']['edit']) && $this->permissions['own_benchmark']['edit'] ||
+                            isset($this->permissions['own_benchmark']['delete']) && $this->permissions['own_benchmark']['delete'] ||
+                            isset($this->permissions['own_benchmark']['view']) && $this->permissions['own_benchmark']['view']) {
+                            return true;
+                        }
+                    }
+                    
+                    // Check if user has any CRUD permission for all benchmarks
+                    if (isset($this->permissions['all_benchmark'])) {
+                        if (isset($this->permissions['all_benchmark']['create']) && $this->permissions['all_benchmark']['create'] ||
+                            isset($this->permissions['all_benchmark']['edit']) && $this->permissions['all_benchmark']['edit'] ||
+                            isset($this->permissions['all_benchmark']['delete']) && $this->permissions['all_benchmark']['delete'] ||
+                            isset($this->permissions['all_benchmark']['view']) && $this->permissions['all_benchmark']['view']) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // If no specific benchmark permissions, Editor role doesn't have access
+                return false;
+            }
+            
+            // Check if specific permission is set in the permissions matrix (for other roles)
             if (isset($this->permissions['benchmark'])) {
                 // Check if user has any CRUD permission for benchmark
                 if (isset($this->permissions['benchmark']['create']) && $this->permissions['benchmark']['create'] ||
@@ -270,12 +299,124 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user can view entries
+     *
+     * @return bool
+     */
+    public function canViewEntries()
+    {
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['entries']['view'])) {
+            return (bool) $this->permissions['entries']['view'];
+        }
+
+        // Default permissions for various roles
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer()) {
+            return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user can create entries
+     *
+     * @return bool
+     */
+    public function canCreateEntries()
+    {
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['entries']['create'])) {
+            return (bool) $this->permissions['entries']['create'];
+        }
+
+        // Default permissions for various roles
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer()) {
+            return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user can edit entries
+     *
+     * @return bool
+     */
+    public function canEditEntries()
+    {
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['entries']['edit'])) {
+            return (bool) $this->permissions['entries']['edit'];
+        }
+
+        // Default permissions for various roles
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer()) {
+            return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user can delete entries
+     *
+     * @return bool
+     */
+    public function canDeleteEntries()
+    {
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['entries']['delete'])) {
+            return (bool) $this->permissions['entries']['delete'];
+        }
+
+        // Default permissions for various roles
+        if ($this->isAdmin() || $this->isChiefEditor()) {
+            return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
      * Check if user can review content
      *
      * @return bool
      */
     public function canReviewContent()
     {
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['review'])) {
+            // Check if user has any CRUD permission for review
+            if (isset($this->permissions['review']['create']) && $this->permissions['review']['create'] ||
+                isset($this->permissions['review']['edit']) && $this->permissions['review']['edit'] ||
+                isset($this->permissions['review']['delete']) && $this->permissions['review']['delete'] ||
+                isset($this->permissions['review']['view']) && $this->permissions['review']['view']) {
+                return true;
+            }
+        }
+
+        // Default permissions for various roles
         return $this->isAdmin() || $this->isReviewer() || $this->isChiefEditor();
     }
 
@@ -286,7 +427,19 @@ class User extends Authenticatable
      */
     public function canManageStaff()
     {
-        return $this->isAdmin(); // Only admin can manage staff
+        // Check if specific permission is set in the permissions matrix
+        if (isset($this->permissions['users'])) {
+            // Check if user has any CRUD permission for users
+            if (isset($this->permissions['users']['create']) && $this->permissions['users']['create'] ||
+                isset($this->permissions['users']['edit']) && $this->permissions['users']['edit'] ||
+                isset($this->permissions['users']['delete']) && $this->permissions['users']['delete'] ||
+                isset($this->permissions['users']['view']) && $this->permissions['users']['view']) {
+                return true;
+            }
+        }
+
+        // Default permissions for various roles
+        return $this->isAdmin(); // Only admin can manage staff by default
     }
 
     /**
@@ -300,7 +453,22 @@ class User extends Authenticatable
         $cacheKey = "user_{$this->id}_can_manage_categories";
         
         return Cache::remember($cacheKey, 300, function () {
-            return $this->isAdmin() || $this->isChiefEditor();
+            // Role-based fast path
+            if ($this->isAdmin() || $this->isChiefEditor()) {
+                return true;
+            }
+
+            // Permission matrix: categories
+            if (isset($this->permissions['categories'])) {
+                if ((isset($this->permissions['categories']['create']) && $this->permissions['categories']['create']) ||
+                    (isset($this->permissions['categories']['edit']) && $this->permissions['categories']['edit']) ||
+                    (isset($this->permissions['categories']['delete']) && $this->permissions['categories']['delete']) ||
+                    (isset($this->permissions['categories']['view']) && $this->permissions['categories']['view'])) {
+                    return true;
+                }
+            }
+
+            return false;
         });
     }
 
@@ -322,13 +490,20 @@ class User extends Authenticatable
                 return true;
             }
             
-            // Check if specific permission is set in the permissions matrix
-            if (isset($this->permissions['Tags'])) {
-                // Check if user has any CRUD permission for tags
-                if (isset($this->permissions['Tags']['create']) && $this->permissions['Tags']['create'] ||
-                    isset($this->permissions['Tags']['edit']) && $this->permissions['Tags']['edit'] ||
-                    isset($this->permissions['Tags']['delete']) && $this->permissions['Tags']['delete'] ||
-                    isset($this->permissions['Tags']['view']) && $this->permissions['Tags']['view']) {
+            // Accept both lowercase and legacy capitalized keys from the permission matrix
+            $tagsPermissionKeys = [];
+            if (isset($this->permissions['tags']) && is_array($this->permissions['tags'])) {
+                $tagsPermissionKeys[] = $this->permissions['tags'];
+            }
+            if (isset($this->permissions['Tags']) && is_array($this->permissions['Tags'])) {
+                $tagsPermissionKeys[] = $this->permissions['Tags'];
+            }
+
+            foreach ($tagsPermissionKeys as $perm) {
+                if ((isset($perm['create']) && $perm['create']) ||
+                    (isset($perm['edit']) && $perm['edit']) ||
+                    (isset($perm['delete']) && $perm['delete']) ||
+                    (isset($perm['view']) && $perm['view'])) {
                     return true;
                 }
             }
@@ -442,8 +617,13 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer() || $this->isEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer()) {
             return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
         }
 
         return false;
@@ -462,8 +642,13 @@ class User extends Authenticatable
         }
 
         // Default permissions for various roles
-        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer() || $this->isEditor()) {
+        if ($this->isAdmin() || $this->isChiefEditor() || $this->isReviewer()) {
             return true;
+        }
+
+        // For Editor role, require explicit permission matrix setting
+        if ($this->isEditor()) {
+            return false;
         }
 
         return false;
@@ -802,5 +987,47 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    /**
+     * Clear permission-related caches for this user
+     */
+    public function clearPermissionCaches()
+    {
+        $cacheKeys = [
+            "user_{$this->id}_can_manage_benchmarks",
+            "user_{$this->id}_can_manage_tags",
+            "user_{$this->id}_can_manage_categories",
+        ];
+        
+        // Clear all permission caches for this user
+        foreach ($cacheKeys as $key) {
+            Cache::forget($key);
+        }
+        
+        // Clear all feature-specific permission caches
+        $features = ['own_benchmark', 'all_benchmark', 'review', 'own_submitted', 'entries', 'categories', 'tags', 'benchmark'];
+        $actions = ['create', 'edit', 'delete', 'view'];
+        
+        foreach ($features as $feature) {
+            foreach ($actions as $action) {
+                Cache::forget("user_{$this->id}_permission_{$feature}_{$action}");
+            }
+        }
+    }
+
+    /**
+     * Override the update method to clear caches when permissions are updated
+     */
+    public function update(array $attributes = [], array $options = [])
+    {
+        $result = parent::update($attributes, $options);
+        
+        // If permissions were updated, clear the caches
+        if (isset($attributes['permissions'])) {
+            $this->clearPermissionCaches();
+        }
+        
+        return $result;
     }
 }

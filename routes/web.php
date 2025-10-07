@@ -6,15 +6,16 @@ use App\Http\Controllers\MonlamBenchmarkController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\HeartbeatController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
     return view('welcome');
 });
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -22,17 +23,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // User Management (Admin Only)
-    Route::prefix('admin')->name('admin.')->middleware(['auth', '\App\Http\Middleware\AdminMiddleware'])->group(function () {
+    // User Management (permission-aware)
+    Route::prefix('admin')->name('admin.')->middleware(['auth', '\App\Http\Middleware\UserManagementMiddleware'])->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserManagementController::class, 'create'])->name('users.create');
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/clear-cache', [UserManagementController::class, 'clearUserCache'])->name('users.clear-cache');
     });
 
     // Routes for MonlamMelongFinetuning entries
@@ -56,8 +56,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/categories', [MonlamMelongFinetuningController::class, 'categoryStore'])->name('admin.categories.store');
         Route::put('/admin/categories/{category}', [MonlamMelongFinetuningController::class, 'categoryUpdate'])->name('admin.categories.update');
         Route::delete('/admin/categories/{category}', [MonlamMelongFinetuningController::class, 'categoryDestroy'])->name('admin.categories.destroy');
+    });
 
-        // Admin Routes - Tag Management
+    // Tag Management (permission-aware)
+    Route::middleware([\App\Http\Middleware\TagManagementMiddleware::class])->group(function () {
         Route::get('/admin/tags', [MonlamMelongFinetuningController::class, 'tagIndex'])->name('admin.tags.index');
         Route::post('/admin/tags', [MonlamMelongFinetuningController::class, 'tagStore'])->name('admin.tags.store');
         Route::put('/admin/tags/{tag}', [MonlamMelongFinetuningController::class, 'tagUpdate'])->name('admin.tags.update');
